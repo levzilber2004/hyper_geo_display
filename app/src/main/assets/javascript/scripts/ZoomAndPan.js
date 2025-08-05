@@ -312,7 +312,7 @@ function updateImageStyle(boundPosition) {
   $('<style>', {
     id: id,
     text: `
-        .player-image {
+        .player-canvas {
           transform: translate(${boundPosition.originAndTranslateX}px, ${boundPosition.originAndTranslateY}px) scale(${boundPosition.scale});
         }
       `,

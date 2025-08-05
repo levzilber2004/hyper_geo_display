@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 # Appends the system to the base dir.
 BASE_DIR = os.path.dirname(__file__) 
@@ -22,6 +23,24 @@ from tkinter import filedialog
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 class QuietHandler(SimpleHTTPRequestHandler):
+    # def copyfile(self, source, outputfile):
+    #     try:
+    #         shutil.copyfileobj(source, outputfile)
+    #     except (ConnectionAbortedError, ConnectionResetError):
+    #         # Ignore client disconnect errors
+    #         pass
+
+    # def end_headers(self):
+    #     # Add CORS headers
+    #     self.send_header('Access-Control-Allow-Origin', '*')
+    #     self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    #     self.send_header('Access-Control-Allow-Headers', '*')
+    #     super().end_headers()
+
+    # def do_OPTIONS(self):
+    #     self.send_response(200, "OK")
+    #     self.end_headers()
+
     def log_message(self, format, *args):
         pass  # Override to disable logging.
 

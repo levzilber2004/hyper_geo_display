@@ -38,6 +38,7 @@ class MainActivity : ComponentActivity() {
     private val WEB_VIEW_PATH = "file:///android_asset/javascript/Main.html"
 
 
+
     /**
      * This function in initiates the app.
      */

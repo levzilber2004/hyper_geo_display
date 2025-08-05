@@ -17,17 +17,27 @@ function createMainPlayer(mainPlayer, jsonList) {
   };
 
   // Creates the player canvas.
-  const canvas = $('<canvas class="player-image player-image-style"></canvas>');
-  const ctx = canvas[constants.JQUERY_ORIGINAL_ELEMENT_INDEX].getContext('2d');
-  mainPlayer.append(canvas);
-  window.renderPlayerImage = (image) => {
-    // Sets the canvas size to match the image size.
-    canvas.attr('width', image.width);
-    canvas.attr('height', image.height);
+  const canvasElement = $(
+    '<canvas class="player-canvas player-canvas-style"></canvas>'
+  )[constants.JQUERY_ORIGINAL_ELEMENT_INDEX];
+  const ctx = canvasElement.getContext('2d');
+  mainPlayer.append(canvasElement);
 
-    // Draws the image on the canvas.
-    ctx.clearRect(0, 0, image.width, image.height);
-    ctx.drawImage(image, 0, 0);
+  let pendingFrame = false;
+  window.renderPlayerImage = (image) => {
+    if (pendingFrame) return;
+    pendingFrame = true;
+    requestAnimationFrame(() => {
+      if (
+        canvasElement.width !== image.width ||
+        canvasElement.height !== image.height
+      ) {
+        canvasElement.width = image.width;
+        canvasElement.height = image.height;
+      }
+      ctx.drawImage(image, 0, 0);
+      pendingFrame = false;
+    });
   };
 
   jsonList.forEach((element) => {
@@ -50,8 +60,8 @@ function createMainPlayer(mainPlayer, jsonList) {
   createPlayerInteraction(mainPlayer, jsonImages, jsonList);
 
   // Creates the zoom and pan events.
-  createZoomEvents(mainPlayer, canvas[constants.JQUERY_ORIGINAL_ELEMENT_INDEX]);
-  createPanEvents(mainPlayer, canvas[constants.JQUERY_ORIGINAL_ELEMENT_INDEX]);
+  createZoomEvents(mainPlayer, canvasElement);
+  createPanEvents(mainPlayer, canvasElement);
 }
 
 // This function creates the player labels.

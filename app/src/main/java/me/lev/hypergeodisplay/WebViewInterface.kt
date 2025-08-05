@@ -12,6 +12,10 @@ import java.io.File
 
 class WebViewInterface(private val activity: MainActivity) {
 
+    // This value represents the invalid value for data.
+    private val INVALID_VALUE = -500
+
+
     /**
      * This function opens the file path.
      */
@@ -94,7 +98,7 @@ class WebViewInterface(private val activity: MainActivity) {
                 val timestamp = if (timestampStr != null) {
                     timestampStr.replace(":", "_").replace(" ", "_")
                 } else {
-                    "-500"
+                    INVALID_VALUE.toString()
                 }
 
                 // Build JSON object for this image
@@ -103,9 +107,9 @@ class WebViewInterface(private val activity: MainActivity) {
                 jsonObj.put("latitude", lat)
                 jsonObj.put("longitude", lon)
                 jsonObj.put("timestamp", timestamp)
-                jsonObj.put("yaw", -500)
-                jsonObj.put("pitch", -500)
-                jsonObj.put("roll", -500)
+                jsonObj.put("yaw", INVALID_VALUE)
+                jsonObj.put("pitch", INVALID_VALUE)
+                jsonObj.put("roll", INVALID_VALUE)
 
                 geoInfoList.add(jsonObj)
             } catch (e: Exception) {
