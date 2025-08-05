@@ -1,10 +1,10 @@
 import os
-import shutil
 import sys
 # Appends the system to the base dir.
 BASE_DIR = os.path.dirname(__file__) 
 sys.path.append(BASE_DIR)
-
+from PIL import Image
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from http.server import SimpleHTTPRequestHandler, HTTPServer
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtWebEngineWidgets import QWebEngineView
@@ -15,10 +15,11 @@ import exifread
 import ctypes
 import logging
 import json
-from datetime import datetime
+from datetime import datetime, time
 import tkinter as tk
 import subprocess
 import threading
+from PIL import Image
 from tkinter import filedialog
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
@@ -72,20 +73,32 @@ class PythonThread(threading.Thread):
 
 class PythonBridge(QObject):
     sendJsCommand = pyqtSignal(str)
+    INVALID_VALUE = -500
+    STREAMING_PORT = 8000
 
-    @pyqtSlot(str)
-    def send_message(self, message):
-        print("Message from JavaScript:", message)
-  
+
 
     def rgba_to_hex(self, rgba):
         return '#{:02x}{:02x}{:02x}{:02x}'.format(*rgba)
 
+    # This function converts gps coordinates to lat lon.
+    def _convert_to_degrees(self, value):
+        """Helper to convert GPS coordinates to decimal degrees"""
+        d = float(value.values[0].num) / float(value.values[0].den)
+        m = float(value.values[1].num) / float(value.values[1].den)
+        s = float(value.values[2].num) / float(value.values[2].den)
+        return d + (m / 60.0) + (s / 3600.0)
+    
+    @pyqtSlot(str)
+    def send_message(self, message):
+        print("Message from JavaScript:", message)
+  
     @pyqtSlot(QVariant, result=str) 
     def dir_selector(self, options):
         dir_path = filedialog.askdirectory(title=options['title'])
         return dir_path
-    
+
+
     @pyqtSlot(QVariant, result=str)
     def file_selector(self, options):
         file_path = filedialog.askopenfilename(title=options['title'],
@@ -102,12 +115,10 @@ class PythonBridge(QObject):
         dir_path = filedialog.askdirectory(title=options['title'])
         return dir_path
     
-    def _convert_to_degrees(self, value):
-        """Helper to convert GPS coordinates to decimal degrees"""
-        d = float(value.values[0].num) / float(value.values[0].den)
-        m = float(value.values[1].num) / float(value.values[1].den)
-        s = float(value.values[2].num) / float(value.values[2].den)
-        return d + (m / 60.0) + (s / 3600.0)
+    @pyqtSlot(str, result=str)
+    def read_json_as_text(self, file_path):
+        with open(file_path, 'r') as file:
+            return str(file.read())
 
     @pyqtSlot(str, result=str)
     def read_dji_images(self, path):
@@ -134,16 +145,16 @@ class PythonBridge(QObject):
                         if timestamp_str:
                             timestamp = str(timestamp_str).replace(":", "_").replace(" ", "_")
                         else:
-                            timestamp = -500
+                            timestamp = self.INVALID_VALUE
 
                         geo_info_list.append({
                             "file": filename,
                             "latitude": lat,
                             "longitude": lon,
                             "timestamp": timestamp,
-                            "yaw": -500,
-                            "pitch": -500,
-                            "roll": -500,
+                            "yaw": self.INVALID_VALUE,
+                            "pitch": self.INVALID_VALUE,
+                            "roll": self.INVALID_VALUE,
                         })
                     except KeyError:
                         print(f"No GPS or timestamp data in {filename}")
@@ -178,9 +189,8 @@ class PythonBridge(QObject):
     @pyqtSlot(str)
     def start_server(self, path):
         os.chdir(path)  # Change working dir so server serves from here.
-        PORT = 8000
-        with HTTPServer(('', PORT), QuietHandler) as httpd:
-            print(f"Serving {path} at http://localhost:{PORT}")
+        with HTTPServer(('', self.STREAMING_PORT), QuietHandler) as httpd:
+            print(f"Serving {path} at http://localhost:{self.STREAMING_PORT}")
             HTMLViewer.static_has_server_started = True
             httpd.serve_forever() 
    
@@ -201,13 +211,7 @@ class HTMLViewer(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        # removes cache
-
-
-
-
-
-
+        # Removes cache.
         self.setWindowTitle("HYPER GEO DISPLAY")
         self.setGeometry(100, 100, 1280, 720)
 

@@ -24,10 +24,10 @@ function createMainPlayer(mainPlayer, jsonList) {
   mainPlayer.append(canvasElement);
 
   let pendingFrame = false;
-  window.renderPlayerImage = (image) => {
+  window.renderPlayerImage = async (image) => {
     if (pendingFrame) return;
     pendingFrame = true;
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
       if (
         canvasElement.width !== image.width ||
         canvasElement.height !== image.height
@@ -35,7 +35,7 @@ function createMainPlayer(mainPlayer, jsonList) {
         canvasElement.width = image.width;
         canvasElement.height = image.height;
       }
-      ctx.drawImage(image, 0, 0);
+      await ctx.drawImage(image, 0, 0);
       pendingFrame = false;
     });
   };

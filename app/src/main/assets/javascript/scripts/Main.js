@@ -23,10 +23,7 @@ function main() {
     // Loads the android interface.
     loadMainElements(
       mainContainer,
-      {
-        title: 'Select a recordings directory',
-        method: 'dir_selector',
-      }, //jsonOptions.
+      null, //jsonOptions.
       false, //runThread.
       false //awaitedServerCheck.
     );
@@ -48,7 +45,6 @@ async function loadMainElements(
 
   // Ask for recordings folder.
   const jsonData = await askForRecordingDir(jsonOptions);
-
   parameters.currentRecordingsPath = jsonData.path + '/';
 
   // Start the server and checks if it runs it on a thread or not.
