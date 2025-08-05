@@ -1,0 +1,117 @@
+:root {
+  --red: rgb(129, 0, 0);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  text-transform: uppercase;
+  font-family: 'Poppins';
+  font-size: 2.5vh;
+  font-weight: bolder;
+  outline: none;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: black;
+}
+
+.box-shadow-element {
+  padding: 1vh;
+  line-height: 1;
+
+  color: white;
+  background-color: black;
+}
+
+.slider::-webkit-slider-thumb,
+.box-shadow-element {
+  border: white 0.1vh solid;
+  box-shadow: 0.3vh 0.3vh 0.1vh rgba(255, 255, 255);
+}
+
+.hidden-element {
+  display: none;
+}
+
+.red-color {
+  color: red;
+}
+
+.green-color {
+  color: limegreen;
+}
+
+.background-green {
+  background-color: green;
+}
+
+.background-red {
+  background-color: var(--red);
+}
+
+.centered-text {
+  text-align: center;
+}
+
+#main-container {
+  height: calc(100vh - 2vh);
+  width: calc(100vw - 2vh);
+  background-color: white;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0.5vh;
+}
+
+.slider {
+  height: 2vh;
+  -webkit-appearance: none;
+  background: white;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.pop-button {
+  user-select: none;
+
+  cursor: pointer;
+  transition: transform 0.1s, color 0.3s, background-color 0.3s !important;
+}
+
+.pop-button:hover {
+  color: black;
+  background-color: white;
+}
+
+.pop-button:active {
+  transform: scale(0.9);
+}
+
+.margin-bottom {
+  margin-bottom: calc(0.3vh);
+}
+
+.extra-margin-bottom {
+  margin-bottom: calc(1vh + 0.3vh);
+}
+
+.margin-right {
+  margin-right: calc(0.3vh);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3vh;
+  height: 3vh;
+  background: red;
+  cursor: pointer;
+}

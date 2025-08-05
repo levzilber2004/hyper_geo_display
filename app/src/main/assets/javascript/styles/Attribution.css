@@ -1,0 +1,8 @@
+.attribution-button {
+  position: absolute;
+  top: 1.5vh;
+  right: calc(1.5vh + 0.3vh);
+  height: 4.7vh;
+  width: 4.7vh;
+  z-index: 9999;
+}

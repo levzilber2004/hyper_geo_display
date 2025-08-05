@@ -1,0 +1,16 @@
+#main-map {
+  height: calc(100%);
+  width: 100%;
+}
+
+.map-label-container {
+  position: absolute;
+  bottom: calc(1.5vh + 0.3vh);
+  right: calc(1.5vh + 0.3vh);
+  z-index: 9999;
+}
+
+.map-label {
+  display: flex;
+  flex-direction: column;
+}
