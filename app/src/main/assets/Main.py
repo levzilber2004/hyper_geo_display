@@ -24,23 +24,17 @@ from tkinter import filedialog
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 class QuietHandler(SimpleHTTPRequestHandler):
-    # def copyfile(self, source, outputfile):
-    #     try:
-    #         shutil.copyfileobj(source, outputfile)
-    #     except (ConnectionAbortedError, ConnectionResetError):
-    #         # Ignore client disconnect errors
-    #         pass
 
-    # def end_headers(self):
-    #     # Add CORS headers
-    #     self.send_header('Access-Control-Allow-Origin', '*')
-    #     self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    #     self.send_header('Access-Control-Allow-Headers', '*')
-    #     super().end_headers()
+    def end_headers(self):
+        # Add CORS headers
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        super().end_headers()
 
-    # def do_OPTIONS(self):
-    #     self.send_response(200, "OK")
-    #     self.end_headers()
+    def do_OPTIONS(self): 
+        self.send_response(200, "OK")
+        self.end_headers()
 
     def log_message(self, format, *args):
         pass  # Override to disable logging.
@@ -119,6 +113,8 @@ class PythonBridge(QObject):
     def read_json_as_text(self, file_path):
         with open(file_path, 'r') as file:
             return str(file.read())
+        
+    
 
     @pyqtSlot(str, result=str)
     def read_dji_images(self, path):
