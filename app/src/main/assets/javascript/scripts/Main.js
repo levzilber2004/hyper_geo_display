@@ -5,6 +5,8 @@ function main() {
     new QWebChannel(qt.webChannelTransport, async function (channel) {
       // Set up the bridge.
       interfaceModule = channel.objects.bridge;
+      // Make bridge globally accessible for other scripts
+      window.bridge = interfaceModule;
       // Set up the js commands from python.
       interfaceModule.sendJsCommand.connect(function (command) {
         eval(command);

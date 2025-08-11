@@ -17,6 +17,14 @@ class WebViewInterface(private val activity: MainActivity) {
 
 
     /**
+     * This function sends a message to the console.
+     */
+    @android.webkit.JavascriptInterface
+    fun send_message(message: String) {
+        println(message)
+    }
+
+    /**
      * This function opens the file path.
      */
     @android.webkit.JavascriptInterface

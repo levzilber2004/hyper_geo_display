@@ -93,13 +93,40 @@ function createMainPlayer(mainPlayer, jsonList) {
       }
 
       try {
-        // Optimize canvas size for performance
-        const targetWidth = Math.min(image.width, constants.CANVAS_MAX_WIDTH);
-        const targetHeight = Math.min(
-          image.height,
-          constants.CANVAS_MAX_HEIGHT
+        // Get current zoom level from the existing zoom system
+        const currentZoom = zoomDict.scale;
+
+        // Dynamic canvas resolution based on configurable zoom tiers
+        let targetWidth, targetHeight;
+        let zoomTier = '';
+
+        // Find the appropriate zoom tier from configuration
+        const currentTier = constants.ZOOM_TIERS.find(
+          (tier) => currentZoom >= tier.minZoom && currentZoom < tier.maxZoom
         );
 
+        if (currentTier) {
+          // Apply the tier's resolution multiplier
+          targetWidth = image.width * currentTier.resolution;
+          targetHeight = image.height * currentTier.resolution;
+          zoomTier = currentTier.name;
+        } else {
+          // Fallback to lowest tier if no match found
+          const fallbackTier =
+            constants.ZOOM_TIERS[constants.ZOOM_TIERS.length - 1];
+          targetWidth = image.width * fallbackTier.resolution;
+          targetHeight = image.height * fallbackTier.resolution;
+          zoomTier = fallbackTier.name + ' (fallback)';
+        }
+
+        // Always send resolution info message, regardless of whether canvas size changes
+        if (window.bridge && window.bridge.send_message) {
+          window.bridge.send_message(
+            `Resolution: ${targetWidth}x${targetHeight} - ${zoomTier}`
+          );
+        }
+
+        // Update canvas size if needed
         if (
           canvasElement.width !== targetWidth ||
           canvasElement.height !== targetHeight
@@ -114,12 +141,6 @@ function createMainPlayer(mainPlayer, jsonList) {
 
         const renderEndTime = performance.now();
         const frameTime = renderEndTime - renderStartTime;
-
-        // Record performance metrics
-        if (window.playerPerformanceMonitor) {
-          window.playerPerformanceMonitor.recordFrameTime(frameTime);
-          window.playerPerformanceMonitor.recordMemoryUsage();
-        }
 
         lastFrameTime = performance.now();
         pendingFrame = false;
@@ -221,9 +242,6 @@ function createMainPlayer(mainPlayer, jsonList) {
   // Make imagePool globally accessible for dashboard
   window.imagePool = imagePool;
 
-  // Create performance dashboard
-  createPerformanceDashboard(mainPlayer);
-
   // This function creates the player interaction.
   createPlayerInteraction(
     mainPlayer,
@@ -236,6 +254,26 @@ function createMainPlayer(mainPlayer, jsonList) {
   // Creates the zoom and pan events.
   createZoomEvents(mainPlayer, canvasElement);
   createPanEvents(mainPlayer, canvasElement);
+
+  // Add zoom change listener for immediate resolution updates
+  let lastZoomScale = zoomDict.scale;
+  const checkZoomChange = () => {
+    const currentZoom = zoomDict.scale;
+    if (currentZoom !== lastZoomScale) {
+      lastZoomScale = currentZoom;
+
+      // Get current image from pool to recalculate resolution
+      // Use the first available image if no specific index is available
+      const firstImage = Array.from(imagePool.values())[0];
+      if (firstImage) {
+        // Force re-render with new zoom level to update resolution
+        renderPlayerImage(firstImage, true);
+      }
+    }
+  };
+
+  // Check for zoom changes every 100ms
+  setInterval(checkZoomChange, 100);
 }
 
 // This function creates the player labels.
@@ -670,101 +708,4 @@ function createPlayerInteraction(
       window.currentAnimationFrame = null;
     }
   };
-}
-
-// Performance monitoring and dashboard
-class PerformanceMonitor {
-  constructor() {
-    this.frameTimes = [];
-    this.memoryUsage = [];
-    this.maxSamples = 60; // Keep last 60 samples
-  }
-
-  recordFrameTime(frameTime) {
-    this.frameTimes.push(frameTime);
-    if (this.frameTimes.length > this.maxSamples) {
-      this.frameTimes.shift();
-    }
-  }
-
-  recordMemoryUsage() {
-    if (window.imagePool) {
-      const poolSize = window.imagePool.size;
-      const totalMemory = Array.from(window.imagePool.values()).reduce(
-        (total, img) => {
-          return total + img.width * img.height * 4; // Approximate memory usage
-        },
-        0
-      );
-
-      this.memoryUsage.push({
-        poolSize,
-        totalMemory: Math.round(totalMemory / (1024 * 1024)), // Convert to MB
-      });
-
-      if (this.memoryUsage.length > this.maxSamples) {
-        this.memoryUsage.shift();
-      }
-    }
-  }
-
-  getAverageFPS() {
-    if (this.frameTimes.length === 0) return 0;
-    const avgFrameTime =
-      this.frameTimes.reduce((sum, time) => sum + time, 0) /
-      this.frameTimes.length;
-    return Math.round(1000 / avgFrameTime);
-  }
-
-  getCurrentMemoryUsage() {
-    if (this.memoryUsage.length === 0) return { poolSize: 0, totalMemory: 0 };
-    return this.memoryUsage[this.memoryUsage.length - 1];
-  }
-}
-
-// Create and display performance dashboard
-function createPerformanceDashboard(mainPlayer) {
-  // Initialize performance monitor
-  window.playerPerformanceMonitor = new PerformanceMonitor();
-
-  // Create dashboard overlay
-  const dashboard = $(`
-    <div class="performance-dashboard hidden-element">
-      <div class="dashboard-header">Performance Monitor</div>
-      <div class="dashboard-content">
-        <div class="metric">
-          <span class="metric-label">FPS:</span>
-          <span class="metric-value" id="fps-display">0</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Pool Size:</span>
-          <span class="metric-value" id="pool-size-display">0</span>
-        </div>
-        <div class="metric">
-          <span class="metric-label">Memory:</span>
-          <span class="metric-value" id="memory-display">0 MB</span>
-        </div>
-      </div>
-      <div class="dashboard-toggle">Press P to toggle</div>
-    </div>
-  `);
-
-  mainPlayer.append(dashboard);
-
-  // Add keyboard shortcut to toggle dashboard
-  $(document).on('keydown', function (event) {
-    if (event.key.toLowerCase() === 'p') {
-      dashboard.toggleClass('hidden-element');
-    }
-  });
-
-  // Update dashboard every 500ms
-  setInterval(() => {
-    const fps = window.playerPerformanceMonitor.getAverageFPS();
-    const memory = window.playerPerformanceMonitor.getCurrentMemoryUsage();
-
-    $('#fps-display').text(fps);
-    $('#pool-size-display').text(memory.poolSize);
-    $('#memory-display').text(memory.totalMemory + ' MB');
-  }, 500);
 }
