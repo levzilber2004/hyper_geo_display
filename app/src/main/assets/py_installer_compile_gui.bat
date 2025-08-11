@@ -1,4 +1,4 @@
-set "project=C:\Lev\projects\project_hyper_geo_display"
+set "project=C:\Lev\projects\project_hyper_geo_display\app\src\main\assets"
 
 python -m PyInstaller -F --noconfirm --onefile --noconsole --icon "%project%\images\app-logo.png" ^
 --add-data "%project%;." ^

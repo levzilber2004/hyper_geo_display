@@ -1,6 +1,30 @@
+// Global zoom state tracking
+let isZooming = false;
+let lastTouchDistance = null;
+let pinchZoomRaf = null;
+let pinchZoomPending = false;
+let pinchZoomEvent = null;
+
 // This function updates the last bounded position dictionary.
 function updateLastBoundedPositionDict(boundedPosition) {
   Object.assign(lastBoundedPositionDict, boundedPosition);
+}
+
+// Function to reset zoom state when needed
+function resetZoomState() {
+  isZooming = false;
+  lastTouchDistance = null;
+  pinchZoomPending = false;
+  pinchZoomEvent = null;
+  if (pinchZoomRaf) {
+    cancelAnimationFrame(pinchZoomRaf);
+    pinchZoomRaf = null;
+  }
+}
+
+// Function to check if currently zooming
+function isCurrentlyZooming() {
+  return isZooming || lastTouchDistance !== null;
 }
 
 // Creates scroll wheel zoom events for a container.
@@ -9,18 +33,17 @@ function createZoomEvents(container, canvas) {
   container.css('cursor', 'grabbing');
 
   // Touch pinch zoom for mobile devices.
-  let lastTouchDistance = null;
-  let pinchZoomRaf = null;
-  let pinchZoomPending = false;
-  let pinchZoomEvent = null;
+  // Note: Variables are now declared globally above
 
   // Add touch events for devices with touch.
   container.on('touchstart', function (event) {
     if (event.touches.length === 2) {
+      isZooming = true; // Mark that we're starting to zoom
       lastTouchDistance = Math.hypot(
         event.touches[0].clientX - event.touches[1].clientX,
         event.touches[0].clientY - event.touches[1].clientY
       );
+      console.log('Zoom started, isZooming:', isZooming); // Debug log
     }
   });
 
@@ -65,6 +88,7 @@ function createZoomEvents(container, canvas) {
   container.on('touchmove', function (event) {
     if (event.touches.length === 2 && lastTouchDistance !== null) {
       event.preventDefault();
+      isZooming = true; // Ensure we're still zooming
       pinchZoomEvent = event;
       if (!pinchZoomPending) {
         pinchZoomPending = true;
@@ -76,12 +100,14 @@ function createZoomEvents(container, canvas) {
   // Add touch events for devices with touch.
   container.on('touchend touchcancel', function (event) {
     if (event.touches.length < 2) {
-      lastTouchDistance = null;
-      pinchZoomPending = false;
-      pinchZoomEvent = null;
-      if (pinchZoomRaf) {
-        cancelAnimationFrame(pinchZoomRaf);
-        pinchZoomRaf = null;
+      // If we were zooming and now have fewer than 2 touches, stop zooming
+      if (isZooming) {
+        console.log('Zoom ended, resetting in 150ms'); // Debug log
+        // Small delay to prevent immediate pan activation
+        setTimeout(() => {
+          resetZoomState();
+          console.log('Zoom state reset complete'); // Debug log
+        }, 150);
       }
     }
   });
@@ -127,7 +153,8 @@ function createPanEvents(container, canvas) {
     const target = event.target;
     if (
       !target.classList.contains('player-icon') &&
-      !target.classList.contains('player-slider')
+      !target.classList.contains('player-slider') &&
+      !isCurrentlyZooming() // Don't allow mouse panning during touch zoom
     ) {
       isMouseDown = true;
       dragStartX = event.clientX;
@@ -138,7 +165,7 @@ function createPanEvents(container, canvas) {
 
   // Mouse move event.
   container.on('mousemove', (event) => {
-    if (isMouseDown) {
+    if (isMouseDown && !isCurrentlyZooming()) {
       panDict.isDragging = true;
       const deltaX = event.clientX - dragStartX;
       const deltaY = event.clientY - dragStartY;
@@ -182,20 +209,54 @@ function createPanEvents(container, canvas) {
   let isTouchPanning = false;
   let lastTouchX = 0;
   let lastTouchY = 0;
+  let touchStartTime = 0; // Track when touch started
 
   // Touch start.
   container.on('touchstart', function (event) {
     if (event.touches.length === 1) {
+      // Don't start panning if we're currently zooming or just finished zooming
+      if (isCurrentlyZooming()) {
+        console.log('Pan blocked - currently zooming or zoom state active'); // Debug log
+        return;
+      }
+
+      // Don't start panning if the touch target is any player control
+      const target = event.target;
+      if (
+        target.classList.contains('player-slider') ||
+        target.closest('.player-slider') !== null ||
+        target.classList.contains('player-icon') ||
+        target.closest('.player-icon') !== null
+      ) {
+        console.log('Pan blocked - touching player control'); // Debug log
+        return;
+      }
+
       isTouchPanning = true;
       lastTouchX = event.touches[0].clientX;
       lastTouchY = event.touches[0].clientY;
+      touchStartTime = Date.now();
       container.css('cursor', 'grabbing');
+      console.log('Pan started, isZooming:', isZooming); // Debug log
     }
   });
 
   // Touch move.
   container.on('touchmove', function (event) {
-    if (isTouchPanning && event.touches.length === 1) {
+    // Double-check that we're not zooming before allowing pan movement
+    if (isTouchPanning && event.touches.length === 1 && !isCurrentlyZooming()) {
+      // Extra safety check - don't pan if touching any player control
+      const target = event.target;
+      if (
+        target.classList.contains('player-slider') ||
+        target.closest('.player-slider') !== null ||
+        target.classList.contains('player-icon') ||
+        target.closest('.player-icon') !== null
+      ) {
+        console.log('Pan move blocked - touching player control'); // Debug log
+        return;
+      }
+
       event.preventDefault();
 
       panDict.isDragging = true;
@@ -235,6 +296,12 @@ function createPanEvents(container, canvas) {
         panDict.isDragging = false;
       }, 0);
       container.css('cursor', 'grab');
+    }
+
+    // If we have no touches left and were zooming, ensure zoom state is reset
+    if (event.touches.length === 0 && isZooming) {
+      console.log('No touches left, resetting zoom state'); // Debug log
+      isZooming = false;
     }
   });
 }

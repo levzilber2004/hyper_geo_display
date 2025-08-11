@@ -21,6 +21,15 @@ const constants = {
   PLAYER_SPEED_JUMP: 2,
   PLAYER_SPEED_MULTIPLIER: 100,
   PLAYER_SPEED_DIVIDER: 10000,
+  // Performance optimization constants
+  IMAGE_POOL_SIZE: 10, // Number of images to keep in memory
+  FRAME_SKIP_THRESHOLD: 20, // Speed threshold for frame skipping
+  CANVAS_MAX_WIDTH: 1920, // Maximum canvas width for performance
+  CANVAS_MAX_HEIGHT: 1080, // Maximum canvas height for performance
+  LAZY_LOAD_AHEAD: 3, // Number of frames to preload ahead
+  MEMORY_CLEANUP_INTERVAL: 5000, // Memory cleanup interval in ms
+  MANUAL_SEEK_DELAY: 100, // Delay before resuming auto-playback after manual seeking (ms)
+  SLIDER_DEBOUNCE_DELAY: 100, // Debounce delay for slider input to prevent rapid frame processing (ms)
 };
 
 const zoomDict = {

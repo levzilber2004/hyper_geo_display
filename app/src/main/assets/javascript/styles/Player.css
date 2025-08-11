@@ -62,3 +62,66 @@
   right: calc(0.5vh + 0.3vh);
   z-index: 2;
 }
+
+/* Performance optimizations for canvas */
+.player-canvas {
+  image-rendering: optimizeSpeed;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  contain: layout style paint;
+  isolation: isolate;
+}
+
+/* Performance Dashboard Styles */
+.performance-dashboard {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 12px;
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.dashboard-header {
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 5px;
+}
+
+.dashboard-content {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.metric {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-label {
+  color: #ccc;
+}
+
+.metric-value {
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.dashboard-toggle {
+  text-align: center;
+  margin-top: 8px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  font-size: 10px;
+  opacity: 0.7;
+}

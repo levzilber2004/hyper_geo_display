@@ -23,23 +23,23 @@ from tkinter import filedialog
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 class QuietHandler(SimpleHTTPRequestHandler):
-    # def copyfile(self, source, outputfile):
-    #     try:
-    #         shutil.copyfileobj(source, outputfile)
-    #     except (ConnectionAbortedError, ConnectionResetError):
-    #         # Ignore client disconnect errors
-    #         pass
+    def copyfile(self, source, outputfile):
+        try:
+            shutil.copyfileobj(source, outputfile)
+        except (ConnectionAbortedError, ConnectionResetError):
+            # Ignore client disconnect errors
+            pass
 
-    # def end_headers(self):
-    #     # Add CORS headers
-    #     self.send_header('Access-Control-Allow-Origin', '*')
-    #     self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    #     self.send_header('Access-Control-Allow-Headers', '*')
-    #     super().end_headers()
+    def end_headers(self):
+        # Add CORS headers 
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', '*')
+        super().end_headers()
 
-    # def do_OPTIONS(self):
-    #     self.send_response(200, "OK")
-    #     self.end_headers()
+    def do_OPTIONS(self):
+        self.send_response(200, "OK")
+        self.end_headers()
 
     def log_message(self, format, *args):
         pass  # Override to disable logging.
@@ -182,7 +182,7 @@ class PythonBridge(QObject):
         with HTTPServer(('', PORT), QuietHandler) as httpd:
             print(f"Serving {path} at http://localhost:{PORT}")
             HTMLViewer.static_has_server_started = True
-            httpd.serve_forever() 
+            httpd.serve_forever()
    
 
     
@@ -202,11 +202,6 @@ class HTMLViewer(QMainWindow):
     def __init__(self):
         super().__init__()
         # removes cache
-
-
-
-
-
 
         self.setWindowTitle("HYPER GEO DISPLAY")
         self.setGeometry(100, 100, 1280, 720)
