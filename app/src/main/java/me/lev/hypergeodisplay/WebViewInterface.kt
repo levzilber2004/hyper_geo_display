@@ -21,7 +21,7 @@ class WebViewInterface(private val activity: MainActivity) {
      */
     @android.webkit.JavascriptInterface
     fun send_message(message: String) {
-        println(message)
+        Log.i("Message from JS: ", message)
     }
 
     /**

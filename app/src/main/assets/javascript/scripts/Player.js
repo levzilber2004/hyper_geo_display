@@ -262,12 +262,11 @@ function createMainPlayer(mainPlayer, jsonList) {
     if (currentZoom !== lastZoomScale) {
       lastZoomScale = currentZoom;
 
-      // Get current image from pool to recalculate resolution
-      // Use the first available image if no specific index is available
-      const firstImage = Array.from(imagePool.values())[0];
-      if (firstImage) {
-        // Force re-render with new zoom level to update resolution
-        renderPlayerImage(firstImage, true);
+      // Only re-render if we have a current frame to display
+      // Don't re-render if player is stopped or no current frame
+      if (!window.stopFrameUpdates && window.currentFrameImage) {
+        // Use the current frame image to maintain position
+        renderPlayerImage(window.currentFrameImage, true);
       }
     }
   };
@@ -304,6 +303,7 @@ function createPlayerInteraction(
   );
   let isRunning = true;
   let isManualSeek = false; // Flag to prevent auto-increment during manual seeking
+  let isProcessingFrame = false; // Flag to prevent multiple simultaneous frame updates
 
   // Initialize global stop flag for frame updates
   window.stopFrameUpdates = false;
@@ -401,10 +401,8 @@ function createPlayerInteraction(
           currentIndex = sliderIndex;
           console.log('Resuming playback from slider position:', currentIndex);
         }
-        // Restart the interval when resuming
-        playerInterval = setInterval(() => {
-          playerIntervalFunction();
-        }, constants.PLAYER_SPEED_DIVIDER / currentSpeed);
+        // Use updatePlayerInterval to ensure the correct speed is applied
+        updatePlayerInterval();
       }
 
       playerPauseIcon.toggleClass('hidden-element');
@@ -459,6 +457,9 @@ function createPlayerInteraction(
         }
 
         if (image) {
+          // Store the current frame image for zoom changes
+          window.currentFrameImage = image;
+
           // Render the image immediately
           renderPlayerImage(image, true);
 
@@ -588,20 +589,23 @@ function createPlayerInteraction(
         preloadImages(index + 1);
       } catch (error) {
         console.error('Failed to load image at index:', index, error);
-        return currentIndex; // Return current index on error
+        return -1; // Return -1 to skip to next frame when image fails to load
       }
     }
 
     // Safety check for image
     if (!image) {
       console.error('Failed to get or load image for index:', index);
-      return currentIndex;
+      return -1; // Return -1 to skip to next frame when image is not available
     }
 
     // Final check before rendering (but allow manual seeking)
     if (window.stopFrameUpdates && !isManualSeek) {
       return currentIndex;
     }
+
+    // Store the current frame image for zoom changes
+    window.currentFrameImage = image;
 
     // Force render when manually seeking to ensure it works even when stopped
     renderPlayerImage(image, isManualSeek);
@@ -620,7 +624,10 @@ function createPlayerInteraction(
       parseFloat(jsonList[index].pitch),
       parseFloat(jsonList[index].roll)
     );
-    return index;
+
+    // Return -1 to indicate successful processing
+    // This allows the frame to advance properly
+    return -1;
   };
 
   // Helper function to sync slider position with current index
@@ -654,19 +661,53 @@ function createPlayerInteraction(
       return;
     }
 
+    // Prevent multiple simultaneous frame updates
+    if (isProcessingFrame) {
+      console.log(
+        'Frame processing already in progress, skipping this interval call'
+      );
+      return;
+    }
+
     // Safety check: ensure currentIndex is within bounds
     if (currentIndex < 0 || currentIndex >= jsonList.length) {
       currentIndex = Math.max(0, Math.min(currentIndex, jsonList.length - 1));
       console.log('Corrected out-of-bounds currentIndex to:', currentIndex);
     }
 
-    updateDataBasedOnIndex(currentIndex);
-    // Only sync slider position when NOT manually seeking
-    // This prevents the slider from "jumping back" during manual seeking
-    if (!isManualSeek) {
-      syncSliderPosition();
-    }
-    currentIndex++;
+    // Set processing lock
+    isProcessingFrame = true;
+
+    // Process the current frame and get the result
+    // Since updateDataBasedOnIndex is async, we need to handle the Promise
+    updateDataBasedOnIndex(currentIndex)
+      .then((result) => {
+        // Only proceed to next frame if the current one was processed successfully
+        // Since updateDataBasedOnIndex returns -1 on success, we check for that
+        if (result === -1) {
+          console.log(
+            `Frame ${currentIndex} processed successfully, advancing to next frame`
+          );
+          currentIndex++;
+        } else {
+          console.log(
+            `Frame ${currentIndex} was blocked or failed, staying on current frame`
+          );
+        }
+
+        // Only sync slider position when NOT manually seeking
+        // This prevents the slider from "jumping back" during manual seeking
+        if (!isManualSeek) {
+          syncSliderPosition();
+        }
+      })
+      .catch((error) => {
+        console.error('Error processing frame:', error);
+      })
+      .finally(() => {
+        // Always release the processing lock after the async operation completes
+        isProcessingFrame = false;
+      });
   };
 
   let playerInterval = setInterval(() => {
@@ -675,22 +716,57 @@ function createPlayerInteraction(
 
   // This function updates the player interval based on the current speed.
   const updatePlayerInterval = () => {
-    clearInterval(playerInterval);
+    console.log(
+      `updatePlayerInterval called - currentSpeed: ${currentSpeed}, currentInterval: ${
+        playerInterval ? 'exists' : 'null'
+      }`
+    );
+
+    // Clear existing interval
+    if (playerInterval) {
+      console.log('Clearing existing interval');
+      clearInterval(playerInterval);
+      playerInterval = null;
+    }
+
+    // Calculate new interval time
+    const newIntervalTime = constants.PLAYER_SPEED_DIVIDER / currentSpeed;
+
+    // Create new interval with calculated time
     playerInterval = setInterval(() => {
       playerIntervalFunction();
-    }, constants.PLAYER_SPEED_DIVIDER / currentSpeed);
+    }, newIntervalTime);
+
+    console.log(
+      `Player interval updated: ${newIntervalTime}ms for speed ${currentSpeed} (new interval ID: ${playerInterval})`
+    );
   };
 
   // This function changes the speed of the player.
   const changeSpeed = (delta) => {
-    currentSpeed = Math.min(
+    // Calculate new speed with bounds checking
+    const newSpeed = Math.min(
       Math.max(constants.PLAYER_MIN_SPEED, currentSpeed + delta),
       constants.PLAYER_MAX_SPEED
     );
-    // Update global variable for frame skipping
-    window.currentSpeed = currentSpeed;
-    speedNumber.text(getCurrentSpeedText());
-    updatePlayerInterval();
+
+    // Only update if speed actually changed
+    if (newSpeed !== currentSpeed) {
+      currentSpeed = newSpeed;
+
+      // Update global variable for frame skipping
+      window.currentSpeed = currentSpeed;
+
+      // Update display
+      speedNumber.text(getCurrentSpeedText());
+
+      // Force update the player interval with new speed
+      updatePlayerInterval();
+
+      console.log(
+        `Speed changed to: ${getCurrentSpeedText()} (${currentSpeed})`
+      );
+    }
   };
 
   leftButton.on('click', () => changeSpeed(-constants.PLAYER_SPEED_JUMP));

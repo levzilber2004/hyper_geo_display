@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import signal
 # Appends the system to the base dir.
 BASE_DIR = os.path.dirname(__file__) 
 sys.path.append(BASE_DIR)
@@ -21,6 +22,20 @@ import subprocess
 import threading
 from tkinter import filedialog
 from http.server import HTTPServer, SimpleHTTPRequestHandler
+
+class StoppableHTTPServer(HTTPServer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.running = False
+        
+    def serve_forever(self):
+        self.running = True
+        while self.running:
+            self.handle_request()
+            
+    def stop(self):
+        self.running = False
+        self.server_close()
 
 class QuietHandler(SimpleHTTPRequestHandler):
     def copyfile(self, source, outputfile):
@@ -72,6 +87,11 @@ class PythonThread(threading.Thread):
 
 class PythonBridge(QObject):
     sendJsCommand = pyqtSignal(str)
+
+    
+    def __init__(self):
+        super().__init__()
+        self.server_thread = None
 
     @pyqtSlot(str)
     def send_message(self, message):
@@ -166,6 +186,10 @@ class PythonBridge(QObject):
         thread.thread = thread
         thread.start()
         
+        # Store server thread reference if starting the server
+        if method == 'start_server':
+            self.server_thread = thread
+        
 
     @pyqtSlot(str)
     def open_file_path(self, path):
@@ -179,10 +203,14 @@ class PythonBridge(QObject):
     def start_server(self, path):
         os.chdir(path)  # Change working dir so server serves from here.
         PORT = 8000
-        with HTTPServer(('', PORT), QuietHandler) as httpd:
-            print(f"Serving {path} at http://localhost:{PORT}")
-            HTMLViewer.static_has_server_started = True
-            httpd.serve_forever()
+        
+        # Create server instance
+        self.current_server = StoppableHTTPServer(('', PORT), QuietHandler)
+        print(f"Serving {path} at http://localhost:{PORT}")
+        HTMLViewer.static_has_server_started = True
+        
+        # Start serving (this will block until stop() is called)
+        self.current_server.serve_forever()
    
 
     
@@ -194,6 +222,39 @@ class PythonBridge(QObject):
     @pyqtSlot(str)
     def execute_js(self, command):
         self.sendJsCommand.emit(command)
+    
+    def stop_server(self):
+        """Stop the HTTP server if it's running"""
+        try:
+            # Stop the server first
+            if hasattr(self, 'current_server') and self.current_server:
+                print("Stopping HTTP server...")
+                self.current_server.stop()
+                self.current_server = None
+                HTMLViewer.static_has_server_started = False
+                print("HTTP server stopped successfully")
+            
+            # Stop the server thread
+            if hasattr(self, 'server_thread') and self.server_thread:
+                print("Stopping server thread...")
+                self.server_thread.stop()
+                
+                # Wait for thread to finish with timeout
+                import time
+                timeout = 2.0  # 2 seconds timeout
+                start_time = time.time()
+                while self.server_thread.is_alive() and (time.time() - start_time) < timeout:
+                    time.sleep(0.1)
+                
+                if self.server_thread.is_alive():
+                    print("Warning: Server thread did not stop within timeout")
+                else:
+                    print("Server thread stopped successfully")
+                
+                self.server_thread = None
+                
+        except Exception as e:
+            print(f"Error stopping server: {e}")
             
 
 class HTMLViewer(QMainWindow):
@@ -225,13 +286,65 @@ class HTMLViewer(QMainWindow):
 
         # Set the browser widget as the central widget of the window
         self.setCentralWidget(self.browser)
+    
+    def closeEvent(self, event):
+        """Handle window close event properly"""
+        print("Closing application...")
+        
+        # Stop the HTTP server if it's running
+        if hasattr(self, 'python_bridge'):
+            print("Stopping server...")
+            self.python_bridge.stop_server()
+            # Give the server a moment to stop
+            import time
+            time.sleep(0.5)
+            
+        # Clean up web engine
+        if hasattr(self, 'browser'):
+            print("Cleaning up web engine...")
+            self.browser.page().deleteLater()
+            self.browser.deleteLater()
+            
+        # Force quit the application
+        print("Application cleanup complete, exiting...")
+        QApplication.quit()
+        
+        # Force exit if normal quit doesn't work
+        import os
+        os._exit(0)
+        
+        event.accept()
 
+
+def signal_handler(signum, frame):
+    """Handle system signals for graceful shutdown"""
+    print(f"\nReceived signal {signum}, shutting down gracefully...")
+    if 'app' in globals():
+        app.quit()
+    os._exit(0)
 
 # Initialize the application and main window
-root = tk.Tk()
-root.withdraw()
-app = QApplication(sys.argv)
-window = HTMLViewer()
-# window = HTMLViewer(False)
-window.show()
-sys.exit(app.exec_())    
+if __name__ == "__main__":
+    # Set up signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    try:
+        root = tk.Tk()
+        root.withdraw()
+        app = QApplication(sys.argv)
+        window = HTMLViewer()
+        # window = HTMLViewer(False)
+        window.show()
+        sys.exit(app.exec_())
+    except KeyboardInterrupt:
+        print("Application interrupted, cleaning up...")
+        # Force cleanup
+        if 'app' in locals():
+            app.quit()
+        os._exit(0)
+    except Exception as e:
+        print(f"Application error: {e}")
+        if 'app' in locals():
+            app.quit()
+        os._exit(1)    
