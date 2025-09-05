@@ -289,7 +289,7 @@ class MainActivity : ComponentActivity() {
      * This function asks for the permission from the user to open the camera and his location.
      */
     @RequiresApi(Build.VERSION_CODES.R)
-    @Deprecated("I most clearly don't care that this function is deprecated.")
+    @Deprecated("This function is deprecated.")
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 0) {

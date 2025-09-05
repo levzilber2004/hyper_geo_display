@@ -1,52 +1,51 @@
-This app displays the recorded data from the hyper geo host app.
+Hyper Geo Display
 
+Hyper Geo Display is an application that visualizes recorded data from the Hyper Geo Host app.
 
-There are two apps inside this app.
-An android app, and a python app.
-Both function on the same generic code, just each one is for a different platform,
-python is for windows. and android is for android.
+This project includes two versions:
+- Android app – runs on Android devices
+- Python app – runs on Windows
 
+Both apps share the same core functionality, adapted for each platform.
 
-To run the python go to:
-App / src / main / assets / Main.py
-the app will open a json file select window, where you need to select a log from the hyper geo host.
-correct folder structure is
-folder /
-	recordings / recording_ folder.
-	logs / recording_.json
+Features:
+- Scroll, zoom, and pan the map
+- Video playback with speed control
+- Full path visualization with the current location
+- Open individual images from the recordings folder
+- Display GEO data for each image
 
-when you select a recording_.json, it will select from the recordings folders the folder with the same name as the recording_.json.
-once you've done that, it will open a recording window with a map, from there it is quite straight forward.
-features:
-Scroll zoom and pan.
-Speed control of the video.
-The entire path is shown on the map including the point you are at.
-File open button, to open the current image in the recordings folder.
-GEO data for each image.
+Python (Windows) Version:
 
+Running the app:
+1. Navigate to:
+   App/src/main/assets/Main.py
+2. Run Main.py. A file selection window will appear.
+3. Select the recordings folder from the Hyper Geo Host.
 
-To run the android you'll have to turn it into an apk:
-once thats done, 
- the app will open a json file select window, where you need to select a log from the hyper geo host.
-correct folder structure is
-Hyper GEO Scope /
-	recordings / recording_ folder.
-	logs / recording_.json
-do not change the names of the folder structure, and do not move them out of their correct position or else it wouldn't work.
+Required folder structure:
+folder/
+    recordings/recording_folder/
+    logs/recording_.json
 
-when you select a recording_.json, it will select from the recordings folders the folder with the same name as the recording_.json.
-once you've done that, it will open a recording window with a map, from there it is quite straight forward.
-features:
-Scroll zoom and pan.
-Speed control of the video.
-The entire path is shown on the map including the point you are at.
-File open button, to open the current image in the recordings folder.
-GEO data for each image.
+Usage:
+- After selecting a folder, the recording window will open with a map.
+- The video stream displays recorded images alongside your recorded path.
+- Use the map and controls to explore recordings.
 
+Android Version:
 
+Running the app:
+1. Build the project into an APK.
+2. Install the APK on your Android device.
+3. Launch the app. A file selection window will appear.
+4. Select the recordings folder from the Hyper Geo Host.
 
+Required folder structure:
+Hyper GEO Scope/
+    recordings/recording_folder/
+    logs/recording_.json
 
-
-
-
-
+Usage:
+- After selecting a folder, the recording window will open with a map.
+- Features are identical to the Python version: scroll, zoom, video speed control, path visualization, file open button, and GEO data display.
